@@ -72,7 +72,7 @@ int FolderMonitorModel::rowCount(const QModelIndex& parent) const
 
 int FolderMonitorModel::columnCount(const QModelIndex& parent) const
 {
-    return 0;
+    return 1;
 }
 
 QModelIndex FolderMonitorModel::parent(const QModelIndex& index) const
