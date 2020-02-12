@@ -4,22 +4,27 @@
 //  Standard includes
 #include <QMainWindow>
 
+//  FolderMonitorModel forward declaration
+class FolderMonitorModel;
+
 //  FolderMonitorView - main view of application
-class FolderMonitorView : public QMainWindow
+class FolderMonitorView final : public QMainWindow
 {
     Q_OBJECT
 public:
 //  Constructors/destructor
 /*
         FolderMonitorView constructor
-        Params: none
+        Params: model
 */
-    FolderMonitorView();
+    FolderMonitorView(const FolderMonitorModel& model);
 
 /*
         FolderMonitorView destructor
 */
     ~FolderMonitorView();
+private:
+    const FolderMonitorModel& m_model;
 };
 
 #endif // FOLDERMONITORVIEW_H_INCLUDED__

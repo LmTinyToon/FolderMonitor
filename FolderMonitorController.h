@@ -5,7 +5,7 @@
 #include <QMainWindow>
 
 //  FolderMonitorController - controller for FolderMonitorModel/FolderMonitorView
-class FolderMonitorController
+class FolderMonitorController final
 {
 public:
 //  Constructors/destructor
