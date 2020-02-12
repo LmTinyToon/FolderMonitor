@@ -4,7 +4,7 @@
 
 //  FolderMonitorView - implementation
 //      FolderMonitorView - constructors/destructors
-FolderMonitorView::FolderMonitorView(const FolderMonitorModel& model)
+FolderMonitorView::FolderMonitorView(FolderMonitorModel& model)
     : QMainWindow(), m_model(model)
 {
     QTreeView* const folders_tree = new QTreeView(this);

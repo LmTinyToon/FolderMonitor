@@ -17,14 +17,14 @@ public:
         FolderMonitorView constructor
         Params: model
 */
-    FolderMonitorView(const FolderMonitorModel& model);
+    FolderMonitorView(FolderMonitorModel& model);
 
 /*
         FolderMonitorView destructor
 */
     ~FolderMonitorView();
 private:
-    const FolderMonitorModel& m_model;
+    FolderMonitorModel& m_model;
 };
 
 #endif // FOLDERMONITORVIEW_H_INCLUDED__
