@@ -13,6 +13,10 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        FolderMonitorView.cpp
+        FolderMonitorView.cpp \
+    FolderMonitorController.cpp \
+    FolderMonitorModel.cpp
 
-HEADERS  += FolderMonitorView.h
+HEADERS  += FolderMonitorView.h \
+    FolderMonitorController.h \
+    FolderMonitorModel.h
