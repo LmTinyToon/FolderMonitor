@@ -20,9 +20,11 @@ public:
         return m_children.size();
     }
 
-    void add_child(FolderItem* const child)
+    FolderItem* add_child(const QString& str)
     {
-        m_children.push_back(child);
+        FolderItem* const item = new FolderItem(this, str);
+        m_children.push_back(item);
+        return item;
     }
 
     FolderItem* parent(void)
@@ -49,8 +51,11 @@ private:
 FolderMonitorModel::FolderMonitorModel()
 {
     m_folder_root = new FolderItem(nullptr, "Root");
-    m_folder_root->add_child(new FolderItem(m_folder_root, "Item1"));
-    m_folder_root->add_child(new FolderItem(m_folder_root, "Item2"));
+    FolderItem* item = m_folder_root;
+    for (int i = 0; i < 15; ++i)
+        item = item->add_child(QString::number(i));
+    m_folder_root->add_child("Item1");
+    m_folder_root->add_child("Item3");
 }
 
 //      FolderMonitorModel - public methods
@@ -66,7 +71,8 @@ int FolderMonitorModel::rowCount(const QModelIndex& parent) const
 
 int FolderMonitorModel::columnCount(const QModelIndex& parent) const
 {
-    return get(parent)->children_count() != 0 ? 1 : 0;
+    return 1;
+    //return get(parent)->children_count() != 0 ? 1 : 0;
 }
 
 QModelIndex FolderMonitorModel::parent(const QModelIndex& index) const
@@ -80,12 +86,20 @@ QModelIndex FolderMonitorModel::parent(const QModelIndex& index) const
 
 QVariant FolderMonitorModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || role != Qt::DisplayRole)
         return QVariant();
 
     if (role != Qt::DisplayRole)
         return QVariant();
     return QVariant(static_cast<item_type>(index.internalPointer())->str());
+}
+
+QVariant FolderMonitorModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
+        return QVariant("HEADER");
+
+    return QVariant();
 }
 
 //  FolderMonitorModel - private methods
