@@ -37,6 +37,16 @@ private:
 //  Private classes
 //      Folder root class forward declaration
     class FolderItem;
+//      Item type typedef
+    typedef FolderItem* item_type;
+
+/*
+        Gets folder item from model index
+        Params: index
+        Return: folder item
+*/
+    FolderItem* get(const QModelIndex& index) const;
+
 //      Folder root
     FolderItem* m_folder_root;
 };

@@ -56,36 +56,25 @@ FolderMonitorModel::FolderMonitorModel()
 //      FolderMonitorModel - public methods
 QModelIndex FolderMonitorModel::index(int row, int column, const QModelIndex& parent) const
 {
-    FolderItem* item = m_folder_root;
-    if (parent.isValid())
-        item = static_cast<FolderItem*>(parent.internalPointer())->at(row);
-    return createIndex(row, column, item);
+    return createIndex(row, column, get(parent)->at(row));
 }
 
 int FolderMonitorModel::rowCount(const QModelIndex& parent) const
 {
-    const FolderItem* item = m_folder_root;
-    if (parent.isValid())
-        item = static_cast<const FolderItem*>(parent.internalPointer());
-    return item->children_count();
+    return get(parent)->children_count();
 }
 
 int FolderMonitorModel::columnCount(const QModelIndex& parent) const
 {
-    return 1;
+    return get(parent)->children_count() != 0 ? 1 : 0;
 }
 
 QModelIndex FolderMonitorModel::parent(const QModelIndex& index) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || get(index)->parent() == m_folder_root)
         return QModelIndex();
-
-    FolderItem* const child_item = static_cast<FolderItem*>(index.internalPointer());
-    FolderItem* const parent_item = child_item->parent();
-
-    if (parent_item == nullptr)
-        return QModelIndex();
-
+    FolderItem* item = get(index);
+    FolderItem* parent_item = item->parent();
     return createIndex(parent_item->parent()->index(parent_item), 0, parent_item);
 }
 
@@ -96,5 +85,13 @@ QVariant FolderMonitorModel::data(const QModelIndex& index, int role) const
 
     if (role != Qt::DisplayRole)
         return QVariant();
-    return QVariant(static_cast<FolderItem*>(index.internalPointer())->str());
+    return QVariant(static_cast<item_type>(index.internalPointer())->str());
+}
+
+//  FolderMonitorModel - private methods
+FolderMonitorModel::FolderItem* FolderMonitorModel::get(const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return m_folder_root;
+    return static_cast<FolderItem*>(index.internalPointer());
 }
