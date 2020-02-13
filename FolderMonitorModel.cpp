@@ -1,3 +1,4 @@
+#include <QDirIterator>
 #include "FolderMonitorModel.h"
 
 //  FolderMonitorModel - implementation
@@ -5,14 +6,14 @@
 class FolderMonitorModel::FolderItem
 {
 public:
-    FolderItem(FolderItem* parent, const QString& str) :
-        m_parent(parent), m_str(str)
+    FolderItem(FolderItem* parent, const QString& path, const QString& name) :
+        m_parent(parent), m_path(path), m_name(name)
     {
     }
 
-    const QString& str(void) const
+    QString name(void) const
     {
-        return m_str;
+        return m_name;
     }
 
     size_t children_count(void) const
@@ -20,14 +21,29 @@ public:
         return m_children.size();
     }
 
-    FolderItem* add_child(const QString& str)
+    FolderItem* add_child(const QString& path, const QString& name)
     {
-        FolderItem* const item = new FolderItem(this, str);
+        FolderItem* const item = new FolderItem(this, path, name);
         m_children.push_back(item);
         return item;
     }
 
-    FolderItem* parent(void)
+    void expand_childs(void)
+    {
+        QDirIterator it(get_path(), QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        while (it.hasNext())
+        {
+            it.next();
+            this->add_child(it.filePath(), it.fileName());
+        }
+    }
+
+    QString get_path(void)
+    {
+        return m_path;
+    }
+
+    FolderItem* parent(void) const
     {
         return m_parent;
     }
@@ -44,18 +60,18 @@ public:
 private:
     std::vector<FolderItem*> m_children;
     FolderItem* m_parent;
-    QString m_str;
+    QString m_path;
+    QString m_name;
 };
 
 //      FolderMonitorModel - Constructors/destructor
 FolderMonitorModel::FolderMonitorModel()
 {
-    m_folder_root = new FolderItem(nullptr, "Root");
-    FolderItem* item = m_folder_root;
-    for (int i = 0; i < 15; ++i)
-        item = item->add_child(QString::number(i));
-    m_folder_root->add_child("Item1");
-    m_folder_root->add_child("Item3");
+    m_folder_root = new FolderItem(nullptr, "", "");
+    for (const auto& item : QDir::drives())
+    {
+        m_folder_root->add_child(item.path(), item.path());
+    }
 }
 
 //      FolderMonitorModel - public methods
@@ -66,6 +82,10 @@ QModelIndex FolderMonitorModel::index(int row, int column, const QModelIndex& pa
 
 int FolderMonitorModel::rowCount(const QModelIndex& parent) const
 {
+    if (get(parent)->children_count() == 0)
+    {
+        get(parent)->expand_childs();
+    }
     return get(parent)->children_count();
 }
 
@@ -91,7 +111,7 @@ QVariant FolderMonitorModel::data(const QModelIndex& index, int role) const
 
     if (role != Qt::DisplayRole)
         return QVariant();
-    return QVariant(static_cast<item_type>(index.internalPointer())->str());
+    return QVariant(get(index)->name());
 }
 
 QVariant FolderMonitorModel::headerData(int section, Qt::Orientation orientation, int role) const
