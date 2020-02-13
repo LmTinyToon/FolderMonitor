@@ -8,12 +8,9 @@
 FolderMonitorView::FolderMonitorView(FolderMonitorModel& model)
     : QMainWindow(), m_model(model)
 {
-
-    auto mainLayout = new QVBoxLayout();
-    this->setLayout(mainLayout);
-    QTreeView* const folders_tree = new QTreeView(this);
+    QTreeView* const folders_tree = new QTreeView();
     folders_tree->setModel(&model);
-    mainLayout->addWidget(folders_tree);
+    this->setCentralWidget(folders_tree);
 }
 
 FolderMonitorView::~FolderMonitorView()
