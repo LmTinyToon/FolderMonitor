@@ -4,14 +4,6 @@
 //  Standard includes
 #include <QAbstractItemModel>
 
-class FolderStatusModel final : public QAbstractListModel
-{
-public:
-    int rowCount(const QModelIndex &parent = QModelIndex()) const final override;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const final override;
-
-};
-
 //  FolderMonitorModel - model to represent file system folders
 class FolderMonitorModel final : public QAbstractItemModel
 {
@@ -27,7 +19,6 @@ public:
 /*
     TODO: (alex) add comment
 */
-    FolderStatusModel& get_submodel(void);
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const final override;
     int rowCount(const QModelIndex& parent = QModelIndex()) const final override;
     int columnCount(const QModelIndex& parent = QModelIndex()) const final override;
@@ -59,8 +50,6 @@ private:
 
 //      Folder root
     FolderItem* m_folder_root;
-//      Folder status model
-    FolderStatusModel m_folder_status_model;
 };
 
 #endif // FOLDERMONITORMODEL_H_INCLUDED__

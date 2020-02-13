@@ -3,6 +3,7 @@
 
 //  Standard includes
 #include <QMainWindow>
+#include <QListWidget>
 
 //  FolderMonitorModel forward declaration
 class FolderMonitorModel;
@@ -10,7 +11,7 @@ class FolderMonitorModel;
 class FolderMonitorController;
 
 //  FolderMonitorView - main view of application
-class FolderMonitorView final : public QMainWindow
+class FolderMonitorView final : public QWidget
 {
     Q_OBJECT
 public:
@@ -26,6 +27,8 @@ public:
 */
     ~FolderMonitorView();
 
+    QListWidget& fodler_info_view(void);
+
 signals:
 /*
         Folder selection was changed
@@ -39,6 +42,8 @@ private:
     FolderMonitorController& m_controller;
 //      Model of view
     FolderMonitorModel& m_model;
+
+    QListWidget* m_folder_info;
 };
 
 #endif // FOLDERMONITORVIEW_H_INCLUDED__

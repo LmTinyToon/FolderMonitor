@@ -2,15 +2,6 @@
 #include "FolderMonitorModel.h"
 
 //  FolderMonitorModel - implementation
-int FolderStatusModel::rowCount(const QModelIndex &parent) const
-{
-    return 2;
-}
-
-QVariant FolderStatusModel::data(const QModelIndex &index, int role) const
-{
-    return QVariant("test field");
-}
 //  FolderMonitorModel::FolderItem  - implementation
 class FolderMonitorModel::FolderItem
 {
@@ -75,7 +66,7 @@ private:
 
 //      FolderMonitorModel - Constructors/destructor
 FolderMonitorModel::FolderMonitorModel() :
-    m_folder_root(nullptr), m_folder_status_model()
+    m_folder_root(nullptr)
 {
     m_folder_root = new FolderItem(nullptr, "", "");
     for (const auto& item : QDir::drives())
@@ -85,10 +76,6 @@ FolderMonitorModel::FolderMonitorModel() :
 }
 
 //      FolderMonitorModel - public methods
-FolderStatusModel& FolderMonitorModel::get_submodel(void)
-{
-    return m_folder_status_model;
-}
 QModelIndex FolderMonitorModel::index(int row, int column, const QModelIndex& parent) const
 {
     return createIndex(row, column, get(parent)->at(row));

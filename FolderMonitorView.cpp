@@ -1,5 +1,5 @@
 #include <QTreeView>
-#include <QListView>
+#include <QListWidget>
 #include <QHBoxLayout>
 #include "FolderMonitorView.h"
 #include "FolderMonitorModel.h"
@@ -9,12 +9,9 @@
 //      FolderMonitorView - constructors/destructors
 FolderMonitorView::FolderMonitorView(FolderMonitorController& controller,
                                      FolderMonitorModel& model)
-    : QMainWindow(), m_controller(controller), m_model(model)
+    : QWidget(), m_controller(controller), m_model(model)
 {
     QBoxLayout* const layout = new QHBoxLayout();
-    QListView* const folder_status = new QListView();
-    folder_status->setModel(&model.get_submodel());
-    layout->addWidget(folder_status);
     QTreeView* const folders_tree = new QTreeView();
     folders_tree->setHeaderHidden(true);
     folders_tree->setModel(&model);
@@ -31,7 +28,15 @@ FolderMonitorView::FolderMonitorView(FolderMonitorController& controller,
             });
     }
     layout->addWidget(folders_tree);
+
+    m_folder_info = new QListWidget();
+    layout->addWidget(m_folder_info);
     this->setLayout(layout);
+}
+
+QListWidget& FolderMonitorView::fodler_info_view(void)
+{
+    return *m_folder_info;
 }
 
 FolderMonitorView::~FolderMonitorView()

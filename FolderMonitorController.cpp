@@ -15,6 +15,6 @@ void FolderMonitorController::run(void)
 
 void FolderMonitorController::on_folder_selection_change(const QModelIndex& index)
 {
-    int k = 0;
-    k = k + 1;
+    m_view.fodler_info_view().clear();
+    m_view.fodler_info_view().addItem(QString::number(index.row()));
 }
