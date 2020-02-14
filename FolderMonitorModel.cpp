@@ -1,4 +1,5 @@
 #include <QDirIterator>
+#include <QThreadPool>
 #include "FolderMonitorModel.h"
 
 //  FolderMonitorModel - implementation
@@ -64,6 +65,59 @@ private:
     QString m_name;
 };
 
+//  FolderMonitorModel::FolderStatsTask implementation
+class FolderMonitorModel::FolderStatsTask : public QRunnable
+{
+public:
+    FolderStatsTask(FolderMonitorModel& model, const QModelIndex& index) :
+        m_index(index), m_file_stats(), m_size(), m_model(model)
+    {
+    }
+
+    void run() override
+    {
+        process(m_model.get(m_index)->get_path());
+        emit m_model.statistics_ready(m_index, m_file_stats, m_size);
+    }
+private:
+    void process(const QString& path)
+    {
+        QDirIterator it1(path, QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        while (it1.hasNext())
+        {
+            it1.next();
+            update_file_info(it1.fileInfo());
+        }
+        QDirIterator it2(path, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        while (it2.hasNext())
+        {
+            it2.next();
+            process(it2.filePath());
+        }
+        if (m_size - m_cached_size > 1024 * 1024 * 100)
+        {
+            m_cached_size = m_size;
+            emit m_model.statistics_ready(m_index, m_file_stats, m_size);
+        }
+    }
+    void update_file_info(const QFileInfo& file_info)
+    {
+        const QString& suffix = file_info.suffix().toLower();
+        const size_t size = file_info.size();
+        auto iterator = m_file_stats.find(suffix);
+        if (iterator == m_file_stats.end())
+            iterator = m_file_stats.insert(suffix, 0);
+        iterator.value() += size;
+        m_size += size;
+    }
+
+    QModelIndex m_index;
+    QMap<QString, size_t> m_file_stats;
+    size_t m_size;
+    size_t m_cached_size;
+    FolderMonitorModel& m_model;
+};
+
 //      FolderMonitorModel - Constructors/destructor
 FolderMonitorModel::FolderMonitorModel() :
     m_folder_root(nullptr)
@@ -74,6 +128,11 @@ FolderMonitorModel::FolderMonitorModel() :
         m_folder_root->add_child(item.path(), item.path());
     }
 }
+
+ FolderMonitorModel::~FolderMonitorModel()
+ {
+
+ }
 
 //      FolderMonitorModel - public methods
 QModelIndex FolderMonitorModel::index(int row, int column, const QModelIndex& parent) const
@@ -129,4 +188,9 @@ FolderMonitorModel::FolderItem* FolderMonitorModel::get(const QModelIndex& index
     if (!index.isValid())
         return m_folder_root;
     return static_cast<FolderItem*>(index.internalPointer());
+}
+
+void FolderMonitorModel::request_statistics(const QModelIndex& index)
+{
+    QThreadPool::globalInstance()->start(new FolderStatsTask(*this, index));
 }

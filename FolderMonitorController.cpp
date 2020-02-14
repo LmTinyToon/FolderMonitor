@@ -16,5 +16,6 @@ void FolderMonitorController::run(void)
 void FolderMonitorController::on_folder_selection_change(const QModelIndex& index)
 {
     m_view.fodler_info_view().clear();
-    m_view.fodler_info_view().addItem(QString::number(index.row()));
+    m_view.fodler_info_view().addItem("Not computed yet");
+    m_model.request_statistics(index);
 }

@@ -4,6 +4,7 @@
 //  Standard includes
 #include <QMainWindow>
 #include <QListWidget>
+#include <QTreeView>
 
 //  FolderMonitorModel forward declaration
 class FolderMonitorModel;
@@ -22,11 +23,6 @@ public:
 */
     FolderMonitorView(FolderMonitorController& controller,FolderMonitorModel& model);
 
-/*
-        FolderMonitorView destructor
-*/
-    ~FolderMonitorView();
-
     QListWidget& fodler_info_view(void);
 
 signals:
@@ -36,6 +32,8 @@ signals:
         Return: none
 */
     void folder_selection_changed(const QModelIndex& index);
+private slots:
+    void on_statistics_ready(const QModelIndex index, const QMap<QString, size_t> files, const size_t size);
 private:
 //  Members
 //      Controller of view
@@ -44,6 +42,7 @@ private:
     FolderMonitorModel& m_model;
 
     QListWidget* m_folder_info;
+    QTreeView* m_folders_view;
 };
 
 #endif // FOLDERMONITORVIEW_H_INCLUDED__
