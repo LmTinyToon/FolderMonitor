@@ -7,11 +7,18 @@
 class FolderMonitorModel::FolderItem
 {
 public:
+//  Constructors/destructor
+/*
+        Folder item constructor
+        Params: parent item, item path, item name
+*/
     FolderItem(FolderItem* parent, const QString& path, const QString& name) :
-        m_parent(parent), m_path(path), m_name(name)
+        m_parent(parent), m_path(path), m_name(name), m_modified(false)
     {
     }
 
+
+//  Folder item destructor
     ~FolderItem(void)
     {
         for (size_t i = 0; i < m_children.size(); ++i)
@@ -21,30 +28,92 @@ public:
         m_children.clear();
     }
 
+/*
+        Name of item
+        Params: none
+        Return: name
+*/
     const QString& local_name(void) const
     {
         return m_name;
     }
 
+/*
+        Path of item
+        Params: none
+        Return: name
+*/
     const QString& get_path(void) const
     {
         return m_path;
     }
 
-    size_t children_count(void) const
+/*
+        Count of children
+        Params: none
+        Return: count of children
+*/
+    size_t children_count(void)
     {
+        ensure_state();
         return m_children.size();
     }
 
+/*
+        Adds child to item
+        Params: child path, child name
+        Return: child item
+*/
     FolderItem* add_child(const QString& path, const QString& name)
     {
         FolderItem* const item = new FolderItem(this, path, name);
         m_children.push_back(item);
+        m_modified = true;
         return item;
     }
 
-    void expand_childs(void)
+/*
+        Gets parent of folder item
+        Params: none
+        Return: folder item
+*/
+    FolderItem* parent(void) const
     {
+        return m_parent;
+    }
+
+/*
+        Gets index of item
+        Params: child item
+        Return: index
+*/
+    size_t index(const FolderItem* const item) const
+    {
+        return std::distance(m_children.begin(), std::find(m_children.begin(), m_children.end(), item));
+    }
+
+/*
+        Gets item at specified index
+        Params: item index
+        Return: item
+*/
+    FolderItem* at(const size_t index) const
+    {
+        return m_children.at(index);
+    }
+
+private:
+//  Private methods
+/*
+        Ensures state of children
+        Params: none
+        Return: none
+*/
+    void ensure_state(void)
+    {
+        if (m_modified)
+            return;
+        m_modified = true;
         QDirIterator it(get_path(), QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
         while (it.hasNext())
         {
@@ -53,25 +122,16 @@ public:
         }
     }
 
-    FolderItem* parent(void) const
-    {
-        return m_parent;
-    }
-
-    size_t index(const FolderItem* const item) const
-    {
-        return std::distance(m_children.begin(), std::find(m_children.begin(), m_children.end(), item));
-    }
-
-    FolderItem* at(const size_t index) const
-    {
-        return m_children.at(index);
-    }
-
-private:
+//  Members
+//      Mofidication flag (should we syncronize children or not)
+    bool m_modified;
+//      Children collection
     std::vector<FolderItem*> m_children;
+//      Parent item
     FolderItem* m_parent;
+//      Item path
     QString m_path;
+//      Item name
     QString m_name;
 };
 
@@ -87,7 +147,7 @@ public:
     void run() override
     {
         process(m_model.get(m_index)->get_path());
-        emit m_model.statistics_ready(m_index, m_file_stats, m_size);
+        emit m_model.statistics_update(m_index, m_file_stats, m_size);
     }
 private:
     void process(const QString& path)
@@ -107,7 +167,7 @@ private:
         if (m_size - m_cached_size > 1024 * 1024 * 100)
         {
             m_cached_size = m_size;
-            emit m_model.statistics_ready(m_index, m_file_stats, m_size);
+            emit m_model.statistics_update(m_index, m_file_stats, m_size);
         }
     }
     void update_file_info(const QFileInfo& file_info)
@@ -147,10 +207,6 @@ QModelIndex FolderMonitorModel::index(int row, int column, const QModelIndex& pa
 
 int FolderMonitorModel::rowCount(const QModelIndex& parent) const
 {
-    if (get(parent)->children_count() == 0)
-    {
-        get(parent)->expand_childs();
-    }
     return static_cast<int>(get(parent)->children_count());
 }
 

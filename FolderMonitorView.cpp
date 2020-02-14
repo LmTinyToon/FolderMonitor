@@ -28,7 +28,7 @@ FolderMonitorView::FolderMonitorView(FolderMonitorModel& model)
         });
 
 
-    QObject::connect(&m_model, &FolderMonitorModel::statistics_ready,
+    QObject::connect(&m_model, &FolderMonitorModel::statistics_update,
         this, [=](const QModelIndex index, const QMap<QString, size_t> files, const size_t size)
         {
             if (folders_view->currentIndex() != index)
