@@ -3,6 +3,7 @@
 
 //  Standard includes
 #include <QAbstractItemModel>
+#include <memory>
 
 //  FolderMonitorModel - model to represent file system folders
 class FolderMonitorModel final : public QAbstractItemModel
@@ -15,7 +16,6 @@ public:
         Params: none
 */
     FolderMonitorModel();
-    ~FolderMonitorModel();
 
 //  Public methods
 /*
@@ -26,7 +26,6 @@ public:
     int columnCount(const QModelIndex& parent = QModelIndex()) const final override;
     QModelIndex parent(const QModelIndex& index) const final override;
     QVariant data(const QModelIndex& index, int role) const final override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const final override;
     void request_statistics(const QModelIndex& index);
 signals:
     void statistics_ready(const QModelIndex index, const QMap<QString, size_t> files, const size_t size);
@@ -35,9 +34,8 @@ private:
 //  Private classes
 //      Folder root class forward declaration
     class FolderItem;
+//  Task to perform collecting statistics of folder
     class FolderStatsTask;
-//      Item type typedef
-    typedef FolderItem* item_type;
 
 /*
         Gets folder item from model index
@@ -47,7 +45,7 @@ private:
     FolderItem* get(const QModelIndex& index) const;
 
 //      Folder root
-    FolderItem* m_folder_root;
+    std::unique_ptr<FolderItem> m_folder_root;
 };
 
 #endif // FOLDERMONITORMODEL_H_INCLUDED__

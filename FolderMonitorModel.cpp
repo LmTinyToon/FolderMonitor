@@ -12,9 +12,23 @@ public:
     {
     }
 
-    QString name(void) const
+    ~FolderItem(void)
+    {
+        for (size_t i = 0; i < m_children.size(); ++i)
+        {
+            delete m_children[i];
+        }
+        m_children.clear();
+    }
+
+    const QString& local_name(void) const
     {
         return m_name;
+    }
+
+    const QString& get_path(void) const
+    {
+        return m_path;
     }
 
     size_t children_count(void) const
@@ -39,15 +53,11 @@ public:
         }
     }
 
-    QString get_path(void)
-    {
-        return m_path;
-    }
-
     FolderItem* parent(void) const
     {
         return m_parent;
     }
+
     size_t index(const FolderItem* const item) const
     {
         return std::distance(m_children.begin(), std::find(m_children.begin(), m_children.end(), item));
@@ -122,17 +132,12 @@ private:
 FolderMonitorModel::FolderMonitorModel() :
     m_folder_root(nullptr)
 {
-    m_folder_root = new FolderItem(nullptr, "", "");
+    m_folder_root = std::make_unique<FolderItem>(nullptr, "", "");
     for (const auto& item : QDir::drives())
     {
         m_folder_root->add_child(item.path(), item.path());
     }
 }
-
- FolderMonitorModel::~FolderMonitorModel()
- {
-
- }
 
 //      FolderMonitorModel - public methods
 QModelIndex FolderMonitorModel::index(int row, int column, const QModelIndex& parent) const
@@ -146,22 +151,22 @@ int FolderMonitorModel::rowCount(const QModelIndex& parent) const
     {
         get(parent)->expand_childs();
     }
-    return get(parent)->children_count();
+    return static_cast<int>(get(parent)->children_count());
 }
 
 int FolderMonitorModel::columnCount(const QModelIndex& parent) const
 {
+    Q_UNUSED(parent)
     return 1;
-    //return get(parent)->children_count() != 0 ? 1 : 0;
 }
 
 QModelIndex FolderMonitorModel::parent(const QModelIndex& index) const
 {
-    if (!index.isValid() || get(index)->parent() == m_folder_root)
+    if (!index.isValid() || get(index)->parent() == m_folder_root.get())
         return QModelIndex();
     FolderItem* item = get(index);
     FolderItem* parent_item = item->parent();
-    return createIndex(parent_item->parent()->index(parent_item), 0, parent_item);
+    return createIndex(static_cast<int>(parent_item->parent()->index(parent_item)), 0, parent_item);
 }
 
 QVariant FolderMonitorModel::data(const QModelIndex& index, int role) const
@@ -171,22 +176,14 @@ QVariant FolderMonitorModel::data(const QModelIndex& index, int role) const
 
     if (role != Qt::DisplayRole)
         return QVariant();
-    return QVariant(get(index)->name());
-}
-
-QVariant FolderMonitorModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-        return QVariant("HEADER");
-
-    return QVariant();
+    return QVariant(get(index)->local_name());
 }
 
 //  FolderMonitorModel - private methods
 FolderMonitorModel::FolderItem* FolderMonitorModel::get(const QModelIndex& index) const
 {
     if (!index.isValid())
-        return m_folder_root;
+        return m_folder_root.get();
     return static_cast<FolderItem*>(index.internalPointer());
 }
 
