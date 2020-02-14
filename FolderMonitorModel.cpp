@@ -1,5 +1,6 @@
 #include <QDirIterator>
-#include <QThreadPool>
+#include <QLinkedList>
+#include <QThread>
 #include "FolderMonitorModel.h"
 
 //  FolderMonitorModel - implementation
@@ -135,19 +136,58 @@ private:
     QString m_name;
 };
 
-//  FolderMonitorModel::FolderStatsTask implementation
-class FolderMonitorModel::FolderStatsTask : public QRunnable
+//  FolderMonitorModel::FolderInfoWorkerThread implementation
+class FolderMonitorModel::FolderInfoWorkerThread : public QThread
 {
+    Q_OBJECT
 public:
-    FolderStatsTask(FolderMonitorModel& model, const QModelIndex& index) :
-        m_index(index), m_file_stats(), m_size(), m_model(model)
+/*
+        Data structure to hold job for worker
+*/
+    struct Job
+    {
+        //  Query kind
+        enum class Query
+        {
+            CalcInfo,   //  New job
+            Exit        //  Termination
+        };
+
+        /*
+            Job constructor
+            Params: query, index
+        */
+        Job(const Query _query, const QModelIndex& _index) :
+            query(_query), index(_index)
+        {
+        }
+
+        //  Public members
+        //      Query
+        const Query query;
+        //      Index
+        const QModelIndex index;
+    };
+
+    FolderInfoWorkerThread(FolderMonitorModel& model) :
+        m_model(model)
     {
     }
 
     void run() override
     {
-        process(m_model.get(m_index)->get_path());
-        emit m_model.statistics_update(m_index, m_file_stats, m_size);
+        for (;;)
+        {
+            Job job;
+            if (!peek_job(job))
+            {
+                sleep(3);
+                continue;
+            }
+            if (job.query == Job::Query::Exit)
+                return;
+            process(m_model.get(job.index)->get_path());
+        }
     }
 private:
     void process(const QString& path)
@@ -181,6 +221,22 @@ private:
         m_size += size;
     }
 
+    bool peek_job(Job& job)
+    {
+        job_mutex.lock();
+        bool result = !m_jobs.empty();
+        while (!m_jobs.empty())
+        {
+            if ((job = m_jobs.first()).query == Job::Query::Exit)
+                break;
+            m_jobs.removeFirst();
+        }
+        job_mutex.unlock();
+        return result;
+    }
+
+    static QMutex job_mutex;
+    QLinkedList<Job> m_jobs;
     QModelIndex m_index;
     QMap<QString, size_t> m_file_stats;
     size_t m_size;

@@ -71,8 +71,8 @@ private:
 //  Private classes
 //      Folder root class forward declaration
     class FolderItem;
-//  Task to perform collecting statistics of folder
-    class FolderStatsTask;
+//  Thread to perform collecting statistics of folder
+    class FolderInfoWorkerThread;
 
 /*
         Gets folder item from model index
@@ -83,6 +83,8 @@ private:
 
 //      Folder root
     std::unique_ptr<FolderItem> m_folder_root;
+//      Background worker
+    std::unique_ptr<FolderInfoWorkerThread> m_worker;
 };
 
 #endif // FOLDERMONITORMODEL_H_INCLUDED__
