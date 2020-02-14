@@ -1,11 +1,12 @@
 #include <QApplication>
-#include "FolderMonitorController.h"
-
+#include "FolderMonitorModel.h"
+#include "FolderMonitorView.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    FolderMonitorController controller;
-    controller.run();
+    FolderMonitorModel model;
+    FolderMonitorView view(model);
+    view.show();
     return a.exec();
 }

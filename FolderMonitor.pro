@@ -14,9 +14,7 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         FolderMonitorView.cpp \
-    FolderMonitorController.cpp \
     FolderMonitorModel.cpp
 
 HEADERS  += FolderMonitorView.h \
-    FolderMonitorController.h \
     FolderMonitorModel.h
