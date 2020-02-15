@@ -124,7 +124,10 @@ private:
         if (m_modified)
             return;
         m_modified = true;
-        QDirIterator it(get_path(), QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        const QString& path = get_path();
+        if (!QDir(path).exists())
+            return;
+        QDirIterator it(path, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
         while (it.hasNext())
         {
             it.next();
@@ -187,6 +190,8 @@ void FolderMonitorModel::FolderInfoWorkerThread::stop()
 
 void FolderMonitorModel::FolderInfoWorkerThread::process(const QModelIndex& index, const QString& path)
 {
+    if (!QDir(path).exists())
+        return;
     QDirIterator it1(path, QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks);
     while (it1.hasNext() && !is_aborting() && !is_new_index_present())
     {

@@ -1,1 +1,5 @@
-FolderMonitor is a GUI application, which demonstrates statistics of selected folder (including subdirectories count, overall files size etc).It's simple a demo program with own limitations (something like doubling hardlinks info, skipping soft links)
+FolderMonitor is a GUI application, which demonstrates statistics of selected folder (including subdirectories count, overall files size etc).It's a simple demo program with own limitations (something like doubling hardlinks info, skipping soft links, "snapshoting" structure of 
+file system)
+TODO: 
+1) Add support of monitoring/updating file system changes (QFileSystemWatcher class)
+2) Add caching of statistics into model data (it can be stored on disk or in-memory data)
