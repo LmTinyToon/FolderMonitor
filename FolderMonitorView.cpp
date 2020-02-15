@@ -29,15 +29,17 @@ FolderMonitorView::FolderMonitorView(FolderMonitorModel& model)
 
 
     QObject::connect(&m_model, &FolderMonitorModel::statistics_update,
-        this, [=](const QModelIndex index, const QMap<QString, size_t> files, const size_t size)
+        this, [=](const QModelIndex index, const FolderMonitorModel::FolderInfo folder_stats)
         {
             if (folders_view->currentIndex() != index)
                 return;
             folder_stats_view->clear();
-            folder_stats_view->addItem("Size : " + QString::number(size));
-            for (auto it = files.cbegin(); it != files.cend(); ++it)
+            folder_stats_view->addItem(QString::number(folder_stats.files_count) + " items");
+            folder_stats_view->addItem("Totalling " + QString::number(folder_stats.files_size) + " bytes");
+            folder_stats_view->addItem(QString::number(folder_stats.subdirs_count) + " subdirectories");
+            for (auto it = folder_stats.files_stats.cbegin(); it != folder_stats.files_stats.cend(); ++it)
             {
-                folder_stats_view->addItem(it.key() + " : " + QString::number(it.value()));
+                folder_stats_view->addItem("\"" + it.key() + "\" : " + QString::number(it.value().files_size / it.value().files_count));
             }
         },
         Qt::ConnectionType::QueuedConnection);

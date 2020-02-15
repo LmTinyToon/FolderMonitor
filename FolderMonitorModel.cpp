@@ -147,8 +147,8 @@ private:
 
 //  FolderMonitorModel::FolderInfoWorkerThread implementation
 FolderMonitorModel::FolderInfoWorkerThread::FolderInfoWorkerThread(FolderMonitorModel& model) :
-    m_is_aborting(), m_index(), m_file_stats(),
-    m_size(), m_cached_size(), m_model(model)
+    m_is_aborting(), m_index(), m_folder_info(),
+    m_cached_size(), m_model(model)
 {
 }
 
@@ -198,10 +198,11 @@ void FolderMonitorModel::FolderInfoWorkerThread::process(const QModelIndex& inde
     {
         it2.next();
         process(index, it2.filePath());
+        m_folder_info.subdirs_count  += 1;
     }
-    if (m_size - m_cached_size > 100 * MEGABYTE)
+    if (m_folder_info.files_size - m_cached_size > 100 * MEGABYTE)
     {
-        m_cached_size = m_size;
+        m_cached_size = m_folder_info.files_size;
         signal_update(index);
     }
 }
@@ -209,11 +210,13 @@ void FolderMonitorModel::FolderInfoWorkerThread::update_file_info(const QFileInf
 {
     const QString& suffix = file_info.suffix().toLower();
     const size_t size = file_info.size();
-    auto iterator = m_file_stats.find(suffix);
-    if (iterator == m_file_stats.end())
-        iterator = m_file_stats.insert(suffix, 0);
-    iterator.value() += size;
-    m_size += size;
+    m_folder_info.files_size += size;
+    m_folder_info.files_count += 1;
+    auto iterator = m_folder_info.files_stats.find(suffix);
+    if (iterator == m_folder_info.files_stats.end())
+        iterator = m_folder_info.files_stats.insert(suffix, FolderInfo::FileGroupStats(0, 0));
+    iterator.value().files_size += size;
+    iterator.value().files_count += 1;
 }
 
 bool FolderMonitorModel::FolderInfoWorkerThread::is_aborting(void) const
@@ -237,15 +240,14 @@ void FolderMonitorModel::FolderInfoWorkerThread::signal_update(const QModelIndex
 {
     if (!is_aborting() && !is_new_index_present())
     {
-        emit m_model.statistics_update(index, m_file_stats, m_size);
+        emit m_model.statistics_update(index, m_folder_info);
     }
 }
 
 void FolderMonitorModel::FolderInfoWorkerThread::clear()
 {
-    m_size = 0;
+    m_folder_info = FolderInfo();
     m_cached_size = 0;
-    m_file_stats.clear();
 }
 
 //      FolderMonitorModel - Constructors/destructor

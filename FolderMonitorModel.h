@@ -10,6 +10,38 @@ class FolderMonitorModel final : public QAbstractItemModel
 {
     Q_OBJECT
 public:
+//  FolderInfo
+    struct FolderInfo
+    {
+        //  Statistics for group files
+        struct FileGroupStats
+        {
+            /*
+                FileGroupStats constructor
+                Params: files size, files count
+            */
+            FileGroupStats(const size_t _files_size, const size_t _files_count) :
+                files_size(_files_size), files_count(_files_count)
+            {
+            }
+
+            //  Members
+            //  Files size
+            size_t files_size;
+            //  Files count
+            size_t files_count;
+        };
+
+        //  Overall files count
+        size_t files_count;
+        //  Subdirectories count
+        size_t subdirs_count;
+        //  Overall files size
+        size_t files_size;
+        //  Files groups statistics
+        QMap<QString, FileGroupStats> files_stats;
+    };
+
 //  Constructors/destructor
 /*
         FolderMonitorModel constructor
@@ -20,7 +52,7 @@ public:
 /*
         FolderMonitoModel destructor
 */
-    ~FolderMonitorModel(void);
+    ~FolderMonitorModel(void) override;
 
 //  Public methods
 /*
@@ -67,10 +99,10 @@ public:
 signals:
 /*
         Statistic of model index update event
-        Params: index, files info, overall size of model index
+        Params: index, folder statistics
         Return: none
 */
-    void statistics_update(const QModelIndex index, const QMap<QString, size_t> files, const size_t size);
+    void statistics_update(const QModelIndex index, const FolderMonitorModel::FolderInfo folder_stats);
 
 private:
 //  Private classes
@@ -91,5 +123,6 @@ private:
 //      Background worker
     std::unique_ptr<FolderInfoWorkerThread> m_worker;
 };
+Q_DECLARE_METATYPE(FolderMonitorModel::FolderInfo)
 
 #endif // FOLDERMONITORMODEL_H_INCLUDED__

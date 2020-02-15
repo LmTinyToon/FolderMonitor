@@ -105,10 +105,8 @@ private:
     bool m_is_aborting;
 //      Job initiator index
     QModelIndex m_index;
-//      Files statistics
-    QMap<QString, size_t> m_file_stats;
-//      Folder size
-    size_t m_size;
+//      Folder statistics
+    FolderInfo m_folder_info;
 //      Cached size of folder
     size_t m_cached_size;
 //      Base model to notify
