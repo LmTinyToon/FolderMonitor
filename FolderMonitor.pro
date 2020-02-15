@@ -17,4 +17,5 @@ SOURCES += main.cpp\
     FolderMonitorModel.cpp
 
 HEADERS  += FolderMonitorView.h \
+    FolderInforWorkerPrivate.h \
     FolderMonitorModel.h
