@@ -1,6 +1,7 @@
 #include <QDirIterator>
 #include <QLinkedList>
 #include <QThread>
+#include <QMutex>
 #include "FolderMonitorModel.h"
 
 //  FolderMonitorModel - implementation
@@ -14,7 +15,7 @@ public:
         Params: parent item, item path, item name
 */
     FolderItem(FolderItem* parent, const QString& path, const QString& name) :
-        m_parent(parent), m_path(path), m_name(name), m_modified(false)
+        m_modified(false), m_parent(parent), m_path(path), m_name(name)
     {
     }
 
@@ -140,74 +141,72 @@ private:
 class FolderMonitorModel::FolderInfoWorkerThread : public QThread
 {
     Q_OBJECT
+
+
 public:
-/*
-        Data structure to hold job for worker
-*/
-    struct Job
-    {
-        //  Query kind
-        enum class Query
-        {
-            CalcInfo,   //  New job
-            Exit        //  Termination
-        };
-
-        /*
-            Job constructor
-            Params: query, index
-        */
-        Job(const Query _query, const QModelIndex& _index) :
-            query(_query), index(_index)
-        {
-        }
-
-        //  Public members
-        //      Query
-        const Query query;
-        //      Index
-        const QModelIndex index;
-    };
 
     FolderInfoWorkerThread(FolderMonitorModel& model) :
-        m_model(model)
+        m_is_aborting(), m_index(), m_file_stats(),
+        m_size(), m_cached_size(), m_model(model)
+    {
+    }
+
+    virtual ~FolderInfoWorkerThread() override
     {
     }
 
     void run() override
     {
-        for (;;)
+        for (; !is_aborting(); )
         {
-            Job job;
-            if (!peek_job(job))
+            QModelIndex index;
+            s_index_mutex.lock();
+            std::swap(index, m_index);
+            s_index_mutex.unlock();
+            if (!index.isValid())
             {
                 sleep(3);
                 continue;
             }
-            if (job.query == Job::Query::Exit)
-                return;
-            process(m_model.get(job.index)->get_path());
+            clear();
+            process(index, m_model.get(index)->get_path());
+            signal_update(index);
         }
     }
+
+    void set_new_index(const QModelIndex& index)
+    {
+        s_index_mutex.lock();
+        m_index = index;
+        s_index_mutex.unlock();
+    }
+
+    void stop()
+    {
+        s_abort_mutex.lock();
+        m_is_aborting = true;
+        s_abort_mutex.unlock();
+    }
+
 private:
-    void process(const QString& path)
+    void process(const QModelIndex& index, const QString& path)
     {
         QDirIterator it1(path, QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks);
-        while (it1.hasNext())
+        while (it1.hasNext() && !is_aborting() && !is_new_index_present())
         {
             it1.next();
             update_file_info(it1.fileInfo());
         }
         QDirIterator it2(path, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
-        while (it2.hasNext())
+        while (it2.hasNext() && !is_aborting() && !is_new_index_present())
         {
             it2.next();
-            process(it2.filePath());
+            process(index, it2.filePath());
         }
         if (m_size - m_cached_size > 1024 * 1024 * 100)
         {
             m_cached_size = m_size;
-            emit m_model.statistics_update(m_index, m_file_stats, m_size);
+            signal_update(index);
         }
     }
     void update_file_info(const QFileInfo& file_info)
@@ -221,22 +220,41 @@ private:
         m_size += size;
     }
 
-    bool peek_job(Job& job)
+    bool is_aborting(void) const
     {
-        job_mutex.lock();
-        bool result = !m_jobs.empty();
-        while (!m_jobs.empty())
-        {
-            if ((job = m_jobs.first()).query == Job::Query::Exit)
-                break;
-            m_jobs.removeFirst();
-        }
-        job_mutex.unlock();
-        return result;
+        bool aborting = false;
+        s_abort_mutex.lock();
+        aborting = m_is_aborting;
+        s_abort_mutex.unlock();
+        return aborting;
+    }
+    bool is_new_index_present(void) const
+    {
+        bool new_index_present = false;
+        s_index_mutex.lock();
+        new_index_present = m_index.isValid();
+        s_index_mutex.unlock();
+        return new_index_present;
     }
 
-    static QMutex job_mutex;
-    QLinkedList<Job> m_jobs;
+    void signal_update(const QModelIndex& index)
+    {
+        if (!is_aborting() && !is_new_index_present())
+        {
+            emit m_model.statistics_update(index, m_file_stats, m_size);
+        }
+    }
+
+    void clear()
+    {
+        m_size = 0;
+        m_cached_size = 0;
+        m_file_stats.clear();
+    }
+
+    static QMutex s_index_mutex;
+    static QMutex s_abort_mutex;
+    bool m_is_aborting;
     QModelIndex m_index;
     QMap<QString, size_t> m_file_stats;
     size_t m_size;
@@ -253,6 +271,16 @@ FolderMonitorModel::FolderMonitorModel() :
     {
         m_folder_root->add_child(item.path(), item.path());
     }
+    m_worker = std::make_unique<FolderInfoWorkerThread>(*this);
+    m_worker->start();
+}
+
+FolderMonitorModel::~FolderMonitorModel(void)
+{
+    //  Minor tricky to optimize performance (stop thread before destructor of folder)
+    m_worker->stop();
+    m_folder_root.reset();
+    m_worker->wait();
 }
 
 //      FolderMonitorModel - public methods
@@ -301,5 +329,5 @@ FolderMonitorModel::FolderItem* FolderMonitorModel::get(const QModelIndex& index
 
 void FolderMonitorModel::request_statistics(const QModelIndex& index)
 {
-    QThreadPool::globalInstance()->start(new FolderStatsTask(*this, index));
+    m_worker->set_new_index(index);
 }

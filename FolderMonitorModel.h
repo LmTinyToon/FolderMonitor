@@ -15,7 +15,12 @@ public:
         FolderMonitorModel constructor
         Params: none
 */
-    FolderMonitorModel();
+    FolderMonitorModel(void);
+
+/*
+        FolderMonitoModel destructor
+*/
+    ~FolderMonitorModel(void);
 
 //  Public methods
 /*
