@@ -1,0 +1,1 @@
+FolderMonitor is a GUI application, which demonstrates statistics of selected folder (including subdirectories count, overall files size etc).It's simple a demo program with own limitations (something like doubling hardlinks info, skipping soft links)
