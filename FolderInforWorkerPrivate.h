@@ -8,6 +8,7 @@
 
 //  Standard includes
 #include <QThread>
+#include <QMutex>
 #include <QDir>
 
 //  Local includes
@@ -96,6 +97,10 @@ private:
     void clear();
 
 //  Private members
+//      Syncronizer for accesses to index
+    static QMutex s_index_mutex;
+//      Syncronizer for accesses to aborting flag
+    static QMutex s_abort_mutex;
 //      Flag, indicating aborting stage of thread
     bool m_is_aborting;
 //      Job initiator index

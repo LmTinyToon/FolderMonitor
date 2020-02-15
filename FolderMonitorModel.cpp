@@ -5,9 +5,13 @@
 #include "FolderMonitorModel.h"
 #include "FolderInforWorkerPrivate.h"
 
-static QMutex s_index_mutex;
-static QMutex s_abort_mutex;
+//      Initializating worker mutexes
+QMutex FolderMonitorModel::FolderInfoWorkerThread::s_index_mutex;
+QMutex FolderMonitorModel::FolderInfoWorkerThread::s_abort_mutex;
+static constexpr size_t MEGABYTE = 1024 * 1024;
 
+//      Syncronizer for accesses to aborting flag
+    static QMutex s_abort_mutex;
 //  FolderMonitorModel - implementation
 //  FolderMonitorModel::FolderItem  - implementation
 class FolderMonitorModel::FolderItem
@@ -195,7 +199,7 @@ void FolderMonitorModel::FolderInfoWorkerThread::process(const QModelIndex& inde
         it2.next();
         process(index, it2.filePath());
     }
-    if (m_size - m_cached_size > 1024 * 1024 * 100)
+    if (m_size - m_cached_size > 100 * MEGABYTE)
     {
         m_cached_size = m_size;
         signal_update(index);
