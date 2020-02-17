@@ -1,5 +1,6 @@
 #include <QDirIterator>
 #include <QLinkedList>
+#include <QThreadPool>
 #include <QThread>
 #include <QMutex>
 #include "FolderMonitorModel.h"
@@ -148,6 +149,99 @@ private:
     QString m_name;
 };
 
+//  FolderMonitorModel::FolderInfoTask
+class FolderMonitorModel::FolderInfoTask final : public QRunnable
+{
+public:
+//  Constructors/destructor
+/*
+        FolderInfoTask constructor
+        Params: model, index
+*/
+    FolderInfoTask(FolderMonitorModel& model, const QModelIndex& index) :
+        m_model(model), m_task_id(m_model.m_current_task_id),
+        m_current_id(m_model.m_current_task_id),
+        m_index(index), m_folder_info(), m_cached_size(0)
+    {
+    }
+
+/*
+        Runs task
+        Params: none
+        Return: none
+*/
+    void run() final override
+    {
+        process(m_model.get(m_index)->get_path());
+        if (is_actual())
+        {
+            emit m_model.statistics_update(m_index, m_folder_info);
+        }
+    }
+private:
+//  Private methods
+/*
+        Checks, whether task is actual
+        Params: none
+        Return: check result
+*/
+    bool is_actual(void) const
+    {
+        return m_task_id == m_current_id;
+    }
+
+    void process(const QString& path)
+    {
+        if (!QDir(path).exists())
+            return;
+        QDirIterator it1(path, QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        while (it1.hasNext() && is_actual())
+        {
+            it1.next();
+            update_file_info(it1.fileInfo());
+        }
+        QDirIterator it2(path, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        while (it2.hasNext() && is_actual())
+        {
+            it2.next();
+            process(it2.filePath());
+            m_folder_info.subdirs_count  += 1;
+        }
+        if (m_folder_info.files_size - m_cached_size > 100 * MEGABYTE && is_actual())
+        {
+            m_cached_size = m_folder_info.files_size;
+            emit m_model.statistics_update(m_index, m_folder_info);
+        }
+    }
+
+    void update_file_info(const QFileInfo& file_info)
+    {
+        const QString& suffix = file_info.suffix().toLower();
+        const size_t size = file_info.size();
+        m_folder_info.files_size += size;
+        m_folder_info.files_count += 1;
+        auto iterator = m_folder_info.files_stats.find(suffix);
+        if (iterator == m_folder_info.files_stats.end())
+            iterator = m_folder_info.files_stats.insert(suffix, FolderInfo::FileGroupStats(0, 0));
+        iterator.value().files_size += size;
+        iterator.value().files_count += 1;
+    }
+
+//  Private members
+//      Base model to notify
+    FolderMonitorModel& m_model;
+//      Current task id
+    const size_t m_task_id;
+//      Current model id
+    volatile const size_t& m_current_id;
+//      Job initiator index
+    const QModelIndex m_index;
+//      Folder statistics
+    FolderInfo m_folder_info;
+//      Cached size of folder
+    size_t m_cached_size;
+};
+
 //  FolderMonitorModel::FolderInfoWorkerThread implementation
 FolderMonitorModel::FolderInfoWorkerThread::FolderInfoWorkerThread(FolderMonitorModel& model) :
     m_is_aborting(), m_index(), m_folder_info(),
@@ -257,23 +351,26 @@ void FolderMonitorModel::FolderInfoWorkerThread::clear()
 
 //      FolderMonitorModel - Constructors/destructor
 FolderMonitorModel::FolderMonitorModel() :
-    m_folder_root(nullptr)
+    m_folder_root(nullptr), m_current_task_id(0)
 {
     m_folder_root.reset(new FolderItem(nullptr, "", ""));
     for (const auto& item : QDir::drives())
     {
         m_folder_root->add_child(item.path(), item.path());
     }
-    m_worker.reset(new FolderInfoWorkerThread(*this));
-    m_worker->start();
+    //m_worker.reset(new FolderInfoWorkerThread(*this));
+    //m_worker->start();
 }
 
 FolderMonitorModel::~FolderMonitorModel(void)
 {
     //  Minor tricky to optimize performance (stop thread before destructor of folder)
-    m_worker->stop();
+    ++m_current_task_id;
     m_folder_root.reset();
-    m_worker->wait();
+    if (QThreadPool::globalInstance()->activeThreadCount() != 0)
+    {
+        QThreadPool::globalInstance()->waitForDone();
+    }
 }
 
 //      FolderMonitorModel - public methods
@@ -322,5 +419,6 @@ FolderMonitorModel::FolderItem* FolderMonitorModel::get(const QModelIndex& index
 
 void FolderMonitorModel::request_statistics(const QModelIndex& index)
 {
-    m_worker->set_new_index(index);
+    ++m_current_task_id;
+    QThreadPool::globalInstance()->start(new FolderInfoTask(*this, index));
 }
