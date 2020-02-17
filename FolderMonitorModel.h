@@ -114,8 +114,6 @@ private:
 //  Private classes
 //      Folder root class forward declaration
     class FolderItem;
-//  Thread to perform collecting statistics of folder
-    class FolderInfoWorkerThread;
 //      FolderInfoTask class forward declaration
     class FolderInfoTask;
 
@@ -128,10 +126,8 @@ private:
 
 //      Folder root
     std::unique_ptr<FolderItem> m_folder_root;
-//      Background worker
-    //std::unique_ptr<FolderInfoWorkerThread> m_worker;
 //      Current task id
-    size_t m_current_task_id;
+    volatile size_t m_current_task_id;
 };
 Q_DECLARE_METATYPE(FolderMonitorModel::FolderInfo)
 

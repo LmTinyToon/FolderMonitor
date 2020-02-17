@@ -1,18 +1,10 @@
 #include <QDirIterator>
-#include <QLinkedList>
 #include <QThreadPool>
-#include <QThread>
-#include <QMutex>
 #include "FolderMonitorModel.h"
-#include "FolderInforWorkerPrivate.h"
 
-//      Initializating worker mutexes
-QMutex FolderMonitorModel::FolderInfoWorkerThread::s_index_mutex;
-QMutex FolderMonitorModel::FolderInfoWorkerThread::s_abort_mutex;
+//  Static constants
 static size_t MEGABYTE = 1024 * 1024;
 
-//      Syncronizer for accesses to aborting flag
-    static QMutex s_abort_mutex;
 //  FolderMonitorModel - implementation
 //  FolderMonitorModel::FolderItem  - implementation
 class FolderMonitorModel::FolderItem
@@ -190,6 +182,11 @@ private:
         return m_task_id == m_current_id;
     }
 
+/*
+        Collects statistics of folder specified by path
+        Params: folder path
+        Return: none
+*/
     void process(const QString& path)
     {
         if (!QDir(path).exists())
@@ -214,6 +211,11 @@ private:
         }
     }
 
+/*
+        Updates file info statistics
+        Params: file info
+        Return: none
+*/
     void update_file_info(const QFileInfo& file_info)
     {
         const QString& suffix = file_info.suffix().toLower();
@@ -242,113 +244,6 @@ private:
     size_t m_cached_size;
 };
 
-//  FolderMonitorModel::FolderInfoWorkerThread implementation
-FolderMonitorModel::FolderInfoWorkerThread::FolderInfoWorkerThread(FolderMonitorModel& model) :
-    m_is_aborting(), m_index(), m_folder_info(),
-    m_cached_size(), m_model(model)
-{
-}
-
-void FolderMonitorModel::FolderInfoWorkerThread::run()
-{
-    for (; !is_aborting(); )
-    {
-        QModelIndex index;
-        s_index_mutex.lock();
-        std::swap(index, m_index);
-        s_index_mutex.unlock();
-        if (!index.isValid())
-        {
-            sleep(3);
-            continue;
-        }
-        clear();
-        process(index, m_model.get(index)->get_path());
-        signal_update(index);
-    }
-}
-
-void FolderMonitorModel::FolderInfoWorkerThread::set_new_index(const QModelIndex& index)
-{
-    s_index_mutex.lock();
-    m_index = index;
-    s_index_mutex.unlock();
-}
-
-void FolderMonitorModel::FolderInfoWorkerThread::stop()
-{
-    s_abort_mutex.lock();
-    m_is_aborting = true;
-    s_abort_mutex.unlock();
-}
-
-void FolderMonitorModel::FolderInfoWorkerThread::process(const QModelIndex& index, const QString& path)
-{
-    if (!QDir(path).exists())
-        return;
-    QDirIterator it1(path, QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks);
-    while (it1.hasNext() && !is_aborting() && !is_new_index_present())
-    {
-        it1.next();
-        update_file_info(it1.fileInfo());
-    }
-    QDirIterator it2(path, QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
-    while (it2.hasNext() && !is_aborting() && !is_new_index_present())
-    {
-        it2.next();
-        process(index, it2.filePath());
-        m_folder_info.subdirs_count  += 1;
-    }
-    if (m_folder_info.files_size - m_cached_size > 100 * MEGABYTE)
-    {
-        m_cached_size = m_folder_info.files_size;
-        signal_update(index);
-    }
-}
-void FolderMonitorModel::FolderInfoWorkerThread::update_file_info(const QFileInfo& file_info)
-{
-    const QString& suffix = file_info.suffix().toLower();
-    const size_t size = file_info.size();
-    m_folder_info.files_size += size;
-    m_folder_info.files_count += 1;
-    auto iterator = m_folder_info.files_stats.find(suffix);
-    if (iterator == m_folder_info.files_stats.end())
-        iterator = m_folder_info.files_stats.insert(suffix, FolderInfo::FileGroupStats(0, 0));
-    iterator.value().files_size += size;
-    iterator.value().files_count += 1;
-}
-
-bool FolderMonitorModel::FolderInfoWorkerThread::is_aborting(void) const
-{
-    bool aborting = false;
-    s_abort_mutex.lock();
-    aborting = m_is_aborting;
-    s_abort_mutex.unlock();
-    return aborting;
-}
-bool FolderMonitorModel::FolderInfoWorkerThread::is_new_index_present(void) const
-{
-    bool new_index_present = false;
-    s_index_mutex.lock();
-    new_index_present = m_index.isValid();
-    s_index_mutex.unlock();
-    return new_index_present;
-}
-
-void FolderMonitorModel::FolderInfoWorkerThread::signal_update(const QModelIndex& index)
-{
-    if (!is_aborting() && !is_new_index_present())
-    {
-        emit m_model.statistics_update(index, m_folder_info);
-    }
-}
-
-void FolderMonitorModel::FolderInfoWorkerThread::clear()
-{
-    m_folder_info = FolderInfo();
-    m_cached_size = 0;
-}
-
 //      FolderMonitorModel - Constructors/destructor
 FolderMonitorModel::FolderMonitorModel() :
     m_folder_root(nullptr), m_current_task_id(0)
@@ -358,8 +253,6 @@ FolderMonitorModel::FolderMonitorModel() :
     {
         m_folder_root->add_child(item.path(), item.path());
     }
-    //m_worker.reset(new FolderInfoWorkerThread(*this));
-    //m_worker->start();
 }
 
 FolderMonitorModel::~FolderMonitorModel(void)
