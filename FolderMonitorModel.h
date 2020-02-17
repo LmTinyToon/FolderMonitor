@@ -13,6 +13,12 @@ public:
 //  FolderInfo
     struct FolderInfo
     {
+        //  Default constructor (to explicitly initialize members)
+        FolderInfo(void) :
+            files_count(0), subdirs_count(0), files_size(0), files_stats()
+        {
+        }
+
         //  Statistics for group files
         struct FileGroupStats
         {
@@ -20,7 +26,7 @@ public:
                 FileGroupStats constructor
                 Params: files size, files count
             */
-            FileGroupStats(const size_t _files_size, const size_t _files_count) :
+            FileGroupStats(const size_t _files_size = 0, const size_t _files_count = 0) :
                 files_size(_files_size), files_count(_files_count)
             {
             }
