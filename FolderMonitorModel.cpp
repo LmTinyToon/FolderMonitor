@@ -8,7 +8,7 @@
 //      Initializating worker mutexes
 QMutex FolderMonitorModel::FolderInfoWorkerThread::s_index_mutex;
 QMutex FolderMonitorModel::FolderInfoWorkerThread::s_abort_mutex;
-static constexpr size_t MEGABYTE = 1024 * 1024;
+static size_t MEGABYTE = 1024 * 1024;
 
 //      Syncronizer for accesses to aborting flag
     static QMutex s_abort_mutex;
@@ -259,12 +259,12 @@ void FolderMonitorModel::FolderInfoWorkerThread::clear()
 FolderMonitorModel::FolderMonitorModel() :
     m_folder_root(nullptr)
 {
-    m_folder_root = std::make_unique<FolderItem>(nullptr, "", "");
+    m_folder_root.reset(new FolderItem(nullptr, "", ""));
     for (const auto& item : QDir::drives())
     {
         m_folder_root->add_child(item.path(), item.path());
     }
-    m_worker = std::make_unique<FolderInfoWorkerThread>(*this);
+    m_worker.reset(new FolderInfoWorkerThread(*this));
     m_worker->start();
 }
 
