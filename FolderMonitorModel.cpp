@@ -259,11 +259,11 @@ FolderMonitorModel::~FolderMonitorModel(void)
 {
     //  Minor tricky to optimize performance (stop thread before destructor of folder)
     ++m_current_task_id;
-    m_folder_root.reset();
     if (QThreadPool::globalInstance()->activeThreadCount() != 0)
     {
         QThreadPool::globalInstance()->waitForDone();
     }
+    m_folder_root.reset();
 }
 
 //      FolderMonitorModel - public methods
